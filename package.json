@@ -1,0 +1,21 @@
+{
+  "name": "c-360-trello-timer",
+  "version": "1.0.0",
+  "description": "Trello Power-Up for time tracking with task categories",
+  "main": "public/index.html",
+  "scripts": {
+    "dev": "npx serve public -p 3000",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "trello",
+    "power-up",
+    "timer",
+    "time-tracking"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}

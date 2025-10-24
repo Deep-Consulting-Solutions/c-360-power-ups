@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Clock face -->
+  <circle cx="50" cy="50" r="45" fill="#026aa7" stroke="#ffffff" stroke-width="2"/>
+
+  <!-- Clock center -->
+  <circle cx="50" cy="50" r="3" fill="#ffffff"/>
+
+  <!-- Clock hands -->
+  <!-- Hour hand -->
+  <line x1="50" y1="50" x2="50" y2="30" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Minute hand -->
+  <line x1="50" y1="50" x2="70" y2="50" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Timer arc/progress indicator -->
+  <path d="M 50 10 A 40 40 0 0 1 85 35" stroke="#61bd4f" stroke-width="4" fill="none" stroke-linecap="round"/>
+
+  <!-- Small decorative dots for hours -->
+  <circle cx="50" cy="15" r="2" fill="#ffffff"/>
+  <circle cx="85" cy="50" r="2" fill="#ffffff"/>
+  <circle cx="50" cy="85" r="2" fill="#ffffff"/>
+  <circle cx="15" cy="50" r="2" fill="#ffffff"/>
+</svg>
