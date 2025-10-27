@@ -72,6 +72,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         setupEventListeners();
 
+        // Final validation to ensure correct button state after all setup
+        validateForm();
+
         // Resize popup to fit content
         t.sizeTo('#popup-container').done();
     } catch (error) {
@@ -161,6 +164,9 @@ async function loadHarvestProjects() {
         projectDropdown.style.display = 'block';
         console.log('Project dropdown displayed, error hidden');
 
+        // Validate form state after projects loaded (in case category already selected)
+        validateForm();
+
     } catch (error) {
         console.error('Failed to load Harvest projects:', error);
         projectLoading.style.display = 'none';
@@ -222,6 +228,8 @@ function autoMatchProject(cardName) {
             validateForm();
         } else {
             console.log('No matching Harvest project found for card name:', cardName);
+            // Validate form state even without auto-match
+            validateForm();
         }
     } catch (error) {
         console.error('Error in autoMatchProject:', error);
@@ -274,16 +282,24 @@ function setupEventListeners() {
     // Project dropdown change
     const projectSelect = document.getElementById('project-select');
     projectSelect.addEventListener('change', function() {
+        console.log('Project dropdown changed to:', projectSelect.value);
+
         const option = projectSelect.options[projectSelect.selectedIndex];
         if (projectSelect.value && option.dataset.projectData) {
             selectedProject = JSON.parse(option.dataset.projectData);
+            console.log('Selected project data:', selectedProject.name);
 
             // Hide auto-match indicator if manually changed
             const matchInfo = document.getElementById('project-match-info');
-            matchInfo.style.display = 'none';
+            if (matchInfo) {
+                matchInfo.style.display = 'none';
+            }
         } else {
             selectedProject = null;
+            console.log('Project selection cleared');
         }
+
+        console.log('Calling validateForm() after project change');
         validateForm();
     });
 
@@ -301,6 +317,8 @@ function setupEventListeners() {
 
 // Validate form and enable/disable start button
 function validateForm() {
+    console.log('=== validateForm() called ===');
+
     const selectElement = document.getElementById('category-select');
     const customInput = document.getElementById('custom-category-input');
     const projectSelect = document.getElementById('project-select');
@@ -324,6 +342,15 @@ function validateForm() {
     const hasProject = !!projectSelect.value;
     const isValid = hasCategory && hasProject;
 
+    console.log('Validation state:', {
+        categoryValue: categoryValue,
+        projectValue: projectSelect.value,
+        hasCategory: hasCategory,
+        hasProject: hasProject,
+        isValid: isValid,
+        buttonDisabled: startButton.disabled
+    });
+
     if (isValid) {
         // Enable button
         startButton.disabled = false;
@@ -335,6 +362,7 @@ function validateForm() {
         // Update progress bar to 100%
         progressBar.classList.add('complete');
 
+        console.log('✓ Form valid - Start Timer button ENABLED');
         return true;
     } else {
         // Disable button
@@ -356,6 +384,7 @@ function validateForm() {
         // Update progress bar to 50%
         progressBar.classList.remove('complete');
 
+        console.log('✗ Form invalid - Start Timer button DISABLED');
         return false;
     }
 }
