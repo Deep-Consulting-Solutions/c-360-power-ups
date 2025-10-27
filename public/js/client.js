@@ -38,13 +38,13 @@ window.TrelloPowerUp.initialize({
         return [
             {
                 icon: './start-timer.svg',
-                text: 'Start Timer',
+                text: 'Start Harvest Timer',
                 callback: handleStartTimer,
                 condition: 'always'
             },
             {
                 icon: './stop-timer.svg',
-                text: 'Stop Timer',
+                text: 'Stop Harvest Timer',
                 callback: handleStopTimer,
                 condition: 'always'
             },
