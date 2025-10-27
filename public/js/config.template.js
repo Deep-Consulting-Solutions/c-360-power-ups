@@ -1,7 +1,4 @@
 // Configuration file for C-360 Timer Power-Up
-// This file is auto-generated during build - DO NOT EDIT MANUALLY
-// Generated at: 2025-10-27T14:44:50.609Z
-// Environment: staging
 
 // Task categories for your team
 const CATEGORIES = [
@@ -14,6 +11,11 @@ const CATEGORIES = [
 
 // User ID to default category mapping
 // Map Trello user IDs to their primary role categories
+// To find user IDs:
+// 1. Open a card where the user is a member
+// 2. Click on their avatar
+// 3. Look at the URL - it will contain their username
+// 4. Or use the Trello API to get the actual user ID
 const USER_CATEGORY_MAPPING = {
     // Examples - replace with actual Trello user IDs
     // 'user_id_1': 'Copywriting',
@@ -27,11 +29,15 @@ const USER_CATEGORY_MAPPING = {
     // 'janedoe': 'Design',
 };
 
-// N8N Webhook Configuration (injected from environment variables)
+// N8N Webhook Configuration
 const N8N_CONFIG = {
-    startTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/start-timer',
-    stopTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/stop-timer',
-    apiKey: 'client-c360-staging@esatest.click'
+    // Replace these with your actual N8N webhook URLs
+    startTimerUrl: 'https://your-n8n-instance.com/webhook/start-timer',
+    stopTimerUrl: 'https://your-n8n-instance.com/webhook/stop-timer',
+
+    // Replace with your actual API key
+    // For production, consider using environment variables
+    apiKey: 'your-api-key-here'
 };
 
 // API Request Configuration

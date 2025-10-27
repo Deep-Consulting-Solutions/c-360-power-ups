@@ -22,13 +22,13 @@ window.TrelloPowerUp.initialize({
     'card-buttons': function(t, options) {
         return [
             {
-                icon: '⏱️',
+                icon: './start-timer.svg',
                 text: 'Start Timer',
                 callback: handleStartTimer,
                 condition: 'always'
             },
             {
-                icon: '⏹️',
+                icon: './stop-timer.svg',
                 text: 'Stop Timer',
                 callback: handleStopTimer,
                 condition: 'always'

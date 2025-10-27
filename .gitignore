@@ -42,6 +42,9 @@ coverage/
 config.local.js
 config.prod.js
 
+# Generated config file (built from environment variables)
+public/js/config.js
+
 # Backup files
 *.backup
 *.bak

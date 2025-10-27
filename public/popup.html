@@ -8,36 +8,88 @@
     <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
-    <div class="popup-container">
-        <div class="popup-header">
-            <h2>Start Timer</h2>
-        </div>
+    <div class="popup-container" id="popup-container">
 
-        <div class="popup-content">
-            <div class="form-group">
-                <label for="category-select" class="form-label">
-                    Select Task Category <span class="required">*</span>
-                </label>
-                <select id="category-select" class="form-select">
-                    <option value="">-- Select Category --</option>
-                </select>
-                <div class="error-message" id="category-error" style="display: none;">
-                    Please select a task category
+            <!-- Content -->
+            <div class="popup-content">
+                <!-- Progress Indicator -->
+                <div class="progress-section">
+                    <div class="progress-label">
+                        <span class="step-badge">1</span>
+                        <span class="step-text">Select task category</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="progress-bar"></div>
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="popup-footer">
-            <button id="start-timer-btn" class="btn btn-primary" disabled>
-                <span class="btn-text">Start Timer</span>
-                <span class="btn-spinner" style="display: none;">
-                    <svg class="spinner" viewBox="0 0 50 50">
-                        <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
-                    </svg>
-                </span>
-            </button>
-            <button id="cancel-btn" class="btn btn-secondary">Cancel</button>
-        </div>
+                <!-- Category Selection -->
+                <div class="form-group">
+                    <label for="category-select" class="form-label">
+                        Task Category
+                        <span class="required">*</span>
+                    </label>
+
+                    <!-- Dropdown with predefined categories -->
+                    <div class="select-wrapper">
+                        <select id="category-select" class="form-select">
+                            <option value="">-- Select Category --</option>
+                            <!-- Categories will be populated here -->
+                        </select>
+                        <!-- ChevronDown Icon -->
+                        <svg class="select-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+
+                    <!-- Custom category input (hidden by default) -->
+                    <div id="custom-category-wrapper" class="custom-input-wrapper" style="display: none;">
+                        <input
+                            type="text"
+                            id="custom-category-input"
+                            class="form-input"
+                            placeholder="Enter custom category..."
+                            autocomplete="off"
+                        />
+                    </div>
+
+                    <!-- Info Message -->
+                    <div class="info-message" id="info-message">
+                        <!-- AlertCircle Icon -->
+                        <svg class="info-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="16" x2="12" y2="12"/>
+                            <line x1="12" y1="8" x2="12.01" y2="8"/>
+                        </svg>
+                        <span>Please select a category to enable time tracking</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="button-group">
+                    <button id="start-timer-btn" class="btn btn-primary" disabled>
+                        <!-- Play Icon -->
+                        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                        <span class="btn-text">Start Timer</span>
+                        <span class="btn-spinner" style="display: none;">
+                            <svg class="spinner" viewBox="0 0 50 50">
+                                <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"></circle>
+                            </svg>
+                        </span>
+                    </button>
+
+                    <button id="cancel-btn" class="btn btn-secondary">Cancel</button>
+                </div>
+
+                <!-- Helper Text (Success State) -->
+                <!-- <div class="helper-box" id="helper-box" style="display: none;">
+                    <p class="helper-text">
+                        ✓ Ready to track time for <strong id="selected-category-text"></strong> tasks
+                    </p>
+                </div> -->
+            </div>
 
         <div class="toast" id="toast" style="display: none;">
             <div class="toast-content">
