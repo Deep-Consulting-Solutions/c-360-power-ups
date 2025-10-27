@@ -1,3 +1,38 @@
+// Check if configuration is loaded, provide defaults if not
+if (typeof CATEGORIES === 'undefined') {
+    console.warn('CATEGORIES not found, using defaults');
+    window.CATEGORIES = [
+        'Copywriting',
+        'Project Management',
+        'Account Management',
+        'PR',
+        'Design'
+    ];
+}
+
+if (typeof USER_CATEGORY_MAPPING === 'undefined') {
+    console.warn('USER_CATEGORY_MAPPING not found, using defaults');
+    window.USER_CATEGORY_MAPPING = {};
+}
+
+if (typeof N8N_CONFIG === 'undefined') {
+    console.warn('N8N_CONFIG not found, using defaults');
+    window.N8N_CONFIG = {
+        startTimerUrl: 'https://your-n8n-instance.com/webhook/start-timer',
+        stopTimerUrl: 'https://your-n8n-instance.com/webhook/stop-timer',
+        apiKey: 'your-api-key-here'
+    };
+}
+
+if (typeof API_CONFIG === 'undefined') {
+    console.warn('API_CONFIG not found, using defaults');
+    window.API_CONFIG = {
+        timeout: 10000,
+        retryAttempts: 2,
+        retryDelay: 1000
+    };
+}
+
 // Get Trello Power-Up instance
 const t = window.TrelloPowerUp.iframe();
 

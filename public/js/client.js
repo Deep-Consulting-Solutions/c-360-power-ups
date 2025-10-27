@@ -1,3 +1,22 @@
+// Check if configuration is loaded, provide defaults if not
+if (typeof N8N_CONFIG === 'undefined') {
+    console.warn('N8N_CONFIG not found, using defaults');
+    window.N8N_CONFIG = {
+        startTimerUrl: 'https://your-n8n-instance.com/webhook/start-timer',
+        stopTimerUrl: 'https://your-n8n-instance.com/webhook/stop-timer',
+        apiKey: 'your-api-key-here'
+    };
+}
+
+if (typeof API_CONFIG === 'undefined') {
+    console.warn('API_CONFIG not found, using defaults');
+    window.API_CONFIG = {
+        timeout: 10000,
+        retryAttempts: 2,
+        retryDelay: 1000
+    };
+}
+
 // Initialize Trello Power-Up
 window.TrelloPowerUp.initialize({
     'card-buttons': function(t, options) {
