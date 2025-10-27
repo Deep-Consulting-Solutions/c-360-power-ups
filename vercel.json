@@ -1,5 +1,5 @@
 {
-  "buildCommand": "echo 'No build required'",
+  "buildCommand": "node build-config.js",
   "outputDirectory": "public",
   "public": true,
   "headers": [

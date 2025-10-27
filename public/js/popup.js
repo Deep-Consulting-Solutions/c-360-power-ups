@@ -18,8 +18,8 @@ if (typeof USER_CATEGORY_MAPPING === 'undefined') {
 if (typeof N8N_CONFIG === 'undefined') {
     console.warn('N8N_CONFIG not found, using defaults');
     window.N8N_CONFIG = {
-        startTimerUrl: 'https://your-n8n-instance.com/webhook/start-timer',
-        stopTimerUrl: 'https://your-n8n-instance.com/webhook/stop-timer',
+        startTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/start-timer',
+        stopTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/stop-timer',
         apiKey: 'your-api-key-here'
     };
 }
@@ -56,16 +56,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-// Populate category dropdown
+// Populate category dropdown with predefined categories + Custom option
 function populateCategoryDropdown() {
     const selectElement = document.getElementById('category-select');
 
+    // Add predefined categories
     CATEGORIES.forEach(category => {
         const option = document.createElement('option');
         option.value = category;
         option.textContent = category;
         selectElement.appendChild(option);
     });
+
+    // Add "Add New Category" option at the end
+    const customOption = document.createElement('option');
+    customOption.value = '__CUSTOM__';
+    customOption.textContent = '+ Add New Category';
+    selectElement.appendChild(customOption);
 }
 
 // Set default category based on user mapping
@@ -87,51 +94,137 @@ function setDefaultCategory(member) {
 // Set up event listeners
 function setupEventListeners() {
     const selectElement = document.getElementById('category-select');
+    const customInputWrapper = document.getElementById('custom-category-wrapper');
+    const customInput = document.getElementById('custom-category-input');
     const startButton = document.getElementById('start-timer-btn');
     const cancelButton = document.getElementById('cancel-btn');
+    const closeButton = document.getElementById('close-btn');
 
-    // Category selection change
-    selectElement.addEventListener('change', validateForm);
+    // Category dropdown change
+    selectElement.addEventListener('change', function() {
+        if (selectElement.value === '__CUSTOM__') {
+            // Show custom input field
+            customInputWrapper.style.display = 'block';
+            customInput.focus();
+            // Disable start button until custom text is entered
+            startButton.disabled = true;
+        } else {
+            // Hide custom input field
+            customInputWrapper.style.display = 'none';
+            customInput.value = '';
+            // Validate with dropdown value
+            validateForm();
+        }
+    });
+
+    // Custom category input change (real-time validation)
+    customInput.addEventListener('input', validateForm);
 
     // Start timer button click
     startButton.addEventListener('click', handleStartTimer);
 
     // Cancel button click
     cancelButton.addEventListener('click', () => t.closePopup());
+
+    // Close button click (optional - may not exist in all layouts)
+    if (closeButton) {
+        closeButton.addEventListener('click', () => t.closePopup());
+    }
 }
 
 // Validate form and enable/disable start button
 function validateForm() {
     const selectElement = document.getElementById('category-select');
+    const customInput = document.getElementById('custom-category-input');
     const startButton = document.getElementById('start-timer-btn');
-    const errorElement = document.getElementById('category-error');
+    const infoMessage = document.getElementById('info-message');
+    const helperBox = document.getElementById('helper-box');
+    const selectedCategoryText = document.getElementById('selected-category-text');
+    const progressBar = document.getElementById('progress-bar');
 
-    if (selectElement.value) {
+    // Get category value from either dropdown or custom input
+    let categoryValue = '';
+    if (selectElement.value === '__CUSTOM__') {
+        // Using custom input
+        categoryValue = customInput.value.trim();
+    } else {
+        // Using predefined category
+        categoryValue = selectElement.value;
+    }
+
+    if (categoryValue) {
+        // Enable button
         startButton.disabled = false;
-        errorElement.style.display = 'none';
+
+        // Hide info message
+        if (infoMessage) {
+            infoMessage.style.display = 'none';
+        }
+
+        // Show helper box with selected category (optional)
+        if (helperBox && selectedCategoryText) {
+            helperBox.style.display = 'block';
+            selectedCategoryText.textContent = categoryValue;
+        }
+
+        // Update progress bar to 100%
+        if (progressBar) {
+            progressBar.classList.add('complete');
+        }
+
         return true;
     } else {
+        // Disable button
         startButton.disabled = true;
+
+        // Show info message
+        if (infoMessage) {
+            infoMessage.style.display = 'flex';
+        }
+
+        // Hide helper box (optional)
+        if (helperBox) {
+            helperBox.style.display = 'none';
+        }
+
+        // Update progress bar to 50%
+        if (progressBar) {
+            progressBar.classList.remove('complete');
+        }
+
         return false;
     }
 }
 
 // Handle start timer button click
 async function handleStartTimer() {
+    console.log('=== START TIMER BUTTON CLICKED ===');
+
     // Validate form first
     if (!validateForm()) {
-        const errorElement = document.getElementById('category-error');
-        errorElement.style.display = 'block';
+        console.log('Form validation failed');
         return;
     }
 
     const selectElement = document.getElementById('category-select');
-    const selectedCategory = selectElement.value;
+    const customInput = document.getElementById('custom-category-input');
+
+    // Get category from either dropdown or custom input
+    let selectedCategory = '';
+    if (selectElement.value === '__CUSTOM__') {
+        selectedCategory = customInput.value.trim();
+    } else {
+        selectedCategory = selectElement.value;
+    }
+
+    console.log('Selected category:', selectedCategory);
 
     // Show loading state
     setLoadingState(true);
 
     try {
+        console.log('Fetching Trello data...');
+
         // Get all necessary data from Trello
         const [card, member, board, list] = await Promise.all([
             t.card('all'),
@@ -139,6 +232,15 @@ async function handleStartTimer() {
             t.board('id', 'name'),
             t.list('id', 'name')
         ]);
+
+        console.log('Trello data received:', {
+            cardId: card.id,
+            cardName: card.name,
+            memberId: member.id,
+            memberName: member.fullName,
+            boardName: board.name,
+            listName: list.name
+        });
 
         // Prepare the payload
         const payload = {
@@ -171,10 +273,22 @@ async function handleStartTimer() {
             listName: list.name
         };
 
+        console.log('Payload prepared:', JSON.stringify(payload, null, 2));
+        console.log('Making API call to:', N8N_CONFIG.startTimerUrl);
+        console.log('Using API key:', N8N_CONFIG.apiKey);
+
         // Make API call to N8N
         const response = await makeApiCall(N8N_CONFIG.startTimerUrl, payload);
 
+        console.log('API response received:', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok
+        });
+
         if (response.ok) {
+            console.log('✓ Timer started successfully');
+
             // Show success message
             showToast('Timer started successfully!', 'success');
 
@@ -183,7 +297,9 @@ async function handleStartTimer() {
                 t.closePopup();
             }, 1500);
         } else {
-            throw new Error(`API returned ${response.status}`);
+            const errorText = await response.text().catch(() => 'No error text available');
+            console.error('API returned error status:', response.status, errorText);
+            throw new Error(`API returned ${response.status}: ${errorText}`);
         }
     } catch (error) {
         console.error('Error starting timer:', error);
@@ -199,7 +315,10 @@ async function handleStartTimer() {
 // Make API call to N8N webhook
 async function makeApiCall(url, data, retries = API_CONFIG.retryAttempts) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
+    const timeoutId = setTimeout(() => {
+        console.warn('Request timeout triggered');
+        controller.abort();
+    }, API_CONFIG.timeout);
 
     try {
         const response = await fetch(url, {
@@ -230,7 +349,7 @@ async function makeApiCall(url, data, retries = API_CONFIG.retryAttempts) {
                 await new Promise(resolve => setTimeout(resolve, API_CONFIG.retryDelay));
                 return makeApiCall(url, data, retries - 1);
             }
-            throw new Error('API call timed out');
+            throw new Error('API call timed out after ' + API_CONFIG.timeout + 'ms');
         }
 
         if (retries > 0) {
@@ -245,23 +364,29 @@ async function makeApiCall(url, data, retries = API_CONFIG.retryAttempts) {
 // Set loading state for the start button
 function setLoadingState(loading) {
     const startButton = document.getElementById('start-timer-btn');
-    const buttonText = startButton.querySelector('.btn-text');
-    const buttonSpinner = startButton.querySelector('.btn-spinner');
     const cancelButton = document.getElementById('cancel-btn');
+    const closeButton = document.getElementById('close-btn');
     const selectElement = document.getElementById('category-select');
+    const customInput = document.getElementById('custom-category-input');
 
     if (loading) {
         startButton.disabled = true;
+        startButton.classList.add('loading');
         cancelButton.disabled = true;
+        if (closeButton) {
+            closeButton.disabled = true;
+        }
         selectElement.disabled = true;
-        buttonText.style.display = 'none';
-        buttonSpinner.style.display = 'inline-block';
+        customInput.disabled = true;
     } else {
         startButton.disabled = false;
+        startButton.classList.remove('loading');
         cancelButton.disabled = false;
+        if (closeButton) {
+            closeButton.disabled = false;
+        }
         selectElement.disabled = false;
-        buttonText.style.display = 'inline';
-        buttonSpinner.style.display = 'none';
+        customInput.disabled = false;
     }
 }
 
