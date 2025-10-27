@@ -41,6 +41,14 @@ const N8N_CONFIG = {
     apiKey: 'your-api-key-here'
 };
 
+// Harvest API Configuration
+const HARVEST_CONFIG = {
+    accessToken: 'your_harvest_personal_access_token',
+    accountId: 'your_harvest_account_id',
+    apiBaseUrl: 'https://api.harvestapp.com/v2',
+    userAgent: 'C360-Trello-Timer'
+};
+
 // API Request Configuration
 const API_CONFIG = {
     timeout: 10000, // 10 seconds timeout
@@ -54,6 +62,7 @@ if (typeof module !== 'undefined' && module.exports) {
         CATEGORIES,
         USER_CATEGORY_MAPPING,
         N8N_CONFIG,
+        HARVEST_CONFIG,
         API_CONFIG
     };
 }

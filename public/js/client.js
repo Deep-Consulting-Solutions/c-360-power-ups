@@ -9,6 +9,16 @@ if (typeof N8N_CONFIG === 'undefined') {
     };
 }
 
+if (typeof HARVEST_CONFIG === 'undefined') {
+    console.warn('HARVEST_CONFIG not found, using defaults');
+    window.HARVEST_CONFIG = {
+        accessToken: '',
+        accountId: '',
+        apiBaseUrl: 'https://api.harvestapp.com/v2',
+        userAgent: 'C360-Trello-Timer (trello@c360.com)'
+    };
+}
+
 if (typeof API_CONFIG === 'undefined') {
     console.warn('API_CONFIG not found, using defaults');
     window.API_CONFIG = {
@@ -17,6 +27,10 @@ if (typeof API_CONFIG === 'undefined') {
         retryDelay: 1000
     };
 }
+
+// Cached Harvest projects
+let harvestProjectsCache = null;
+let harvestProjectsFetchPromise = null;
 
 // Initialize Trello Power-Up
 window.TrelloPowerUp.initialize({
@@ -44,12 +58,69 @@ window.TrelloPowerUp.initialize({
     }
 });
 
+// Fetch and cache Harvest projects
+async function fetchHarvestProjects() {
+    // If already fetching, return existing promise
+    if (harvestProjectsFetchPromise) {
+        return harvestProjectsFetchPromise;
+    }
+
+    // If already cached, return cache
+    if (harvestProjectsCache) {
+        return harvestProjectsCache;
+    }
+
+    // Check if Harvest is configured
+    if (!HARVEST_CONFIG.accessToken || !HARVEST_CONFIG.accountId) {
+        console.warn('Harvest API credentials not configured');
+        return [];
+    }
+
+    harvestProjectsFetchPromise = (async () => {
+        try {
+            console.log('Fetching Harvest projects...');
+
+            const response = await fetch(
+                `${HARVEST_CONFIG.apiBaseUrl}/projects?is_active=true&per_page=2000`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${HARVEST_CONFIG.accessToken}`,
+                        'Harvest-Account-Id': HARVEST_CONFIG.accountId,
+                        'User-Agent': HARVEST_CONFIG.userAgent
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Harvest API returned ${response.status}`);
+            }
+
+            const data = await response.json();
+            harvestProjectsCache = data.projects || [];
+            console.log(`✓ Cached ${harvestProjectsCache.length} Harvest projects`);
+
+            return harvestProjectsCache;
+        } catch (error) {
+            console.error('Failed to fetch Harvest projects:', error);
+            harvestProjectsFetchPromise = null; // Reset to allow retry
+            throw error;
+        }
+    })();
+
+    return harvestProjectsFetchPromise;
+}
+
+// Initialize Harvest projects cache on Power-Up load
+fetchHarvestProjects().catch(err => {
+    console.warn('Initial Harvest fetch failed, will retry on popup open:', err);
+});
+
 // Handle Start Timer button click
 function handleStartTimer(t) {
     return t.popup({
         title: 'Start Timer',
         url: './popup.html',
-        height: 280
+        height: 320
     });
 }
 
