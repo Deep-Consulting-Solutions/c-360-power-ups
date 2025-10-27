@@ -32,6 +32,7 @@ const N8N_API_KEY = process.env.N8N_API_KEY || 'your-api-key-here';
 const N8N_BASE_URL = 'https://c360-staging-flows.app.n8n.cloud/webhook';
 const START_TIMER_URL = `${N8N_BASE_URL}/${ENVIRONMENT}/start-timer`;
 const STOP_TIMER_URL = `${N8N_BASE_URL}/${ENVIRONMENT}/stop-timer`;
+const CREATE_CHILD_CARDS_URL = `${N8N_BASE_URL}/${ENVIRONMENT}/create-child-cards`;
 
 // Generate config.js content
 const configContent = `// Configuration file for C-360 Timer Power-Up
@@ -67,6 +68,7 @@ const USER_CATEGORY_MAPPING = {
 const N8N_CONFIG = {
     startTimerUrl: '${START_TIMER_URL}',
     stopTimerUrl: '${STOP_TIMER_URL}',
+    createChildCardsUrl: '${CREATE_CHILD_CARDS_URL}',
     apiKey: '${N8N_API_KEY}'
 };
 
@@ -96,4 +98,5 @@ console.log('✓ Config file generated successfully');
 console.log(`  Environment: ${ENVIRONMENT}`);
 console.log(`  Start Timer URL: ${START_TIMER_URL}`);
 console.log(`  Stop Timer URL: ${STOP_TIMER_URL}`);
+console.log(`  Convert Checklist Items to Cards URL: ${CREATE_CHILD_CARDS_URL}`);
 console.log(`  Output: ${outputPath}`);

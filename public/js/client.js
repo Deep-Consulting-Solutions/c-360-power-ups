@@ -2,8 +2,9 @@
 if (typeof N8N_CONFIG === 'undefined') {
     console.warn('N8N_CONFIG not found, using defaults');
     window.N8N_CONFIG = {
-        startTimerUrl: 'https://your-n8n-instance.com/webhook/start-timer',
-        stopTimerUrl: 'https://your-n8n-instance.com/webhook/stop-timer',
+        startTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/start-timer',
+        stopTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/stop-timer',
+        createChildCardsUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/create-child-cards',
         apiKey: 'your-api-key-here'
     };
 }
@@ -32,6 +33,12 @@ window.TrelloPowerUp.initialize({
                 text: 'Stop Timer',
                 callback: handleStopTimer,
                 condition: 'always'
+            },
+            {
+                icon: './create-child-cards.svg',
+                text: 'Convert Checklist Items to Cards',
+                callback: handleChecklistToCards,
+                condition: 'always'
             }
         ];
     }
@@ -43,6 +50,15 @@ function handleStartTimer(t) {
         title: 'Start Timer',
         url: './popup.html',
         height: 280
+    });
+}
+
+// Handle Convert Checklist Items to Cards button click
+function handleChecklistToCards(t) {
+    return t.popup({
+        title: 'Convert Checklist Items to Cards',
+        url: './checklist-popup.html',
+        height: 400
     });
 }
 

@@ -1,6 +1,6 @@
 // Configuration file for C-360 Timer Power-Up
 // This file is auto-generated during build - DO NOT EDIT MANUALLY
-// Generated at: 2025-10-27T14:44:50.609Z
+// Generated at: 2025-10-27T16:18:15.097Z
 // Environment: staging
 
 // Task categories for your team
@@ -31,6 +31,7 @@ const USER_CATEGORY_MAPPING = {
 const N8N_CONFIG = {
     startTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/start-timer',
     stopTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/stop-timer',
+    createChildCardsUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/create-child-cards',
     apiKey: 'client-c360-staging@esatest.click'
 };
 

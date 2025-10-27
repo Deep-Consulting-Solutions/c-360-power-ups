@@ -18,8 +18,8 @@ if (typeof USER_CATEGORY_MAPPING === 'undefined') {
 if (typeof N8N_CONFIG === 'undefined') {
     console.warn('N8N_CONFIG not found, using defaults');
     window.N8N_CONFIG = {
-        startTimerUrl: 'https://your-n8n-instance.com/webhook/start-timer',
-        stopTimerUrl: 'https://your-n8n-instance.com/webhook/stop-timer',
+        startTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/start-timer',
+        stopTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/stop-timer',
         apiKey: 'your-api-key-here'
     };
 }
@@ -38,38 +38,21 @@ const t = window.TrelloPowerUp.iframe();
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('=== POPUP INITIALIZING ===');
-    console.log('Configuration loaded:', {
-        categories: CATEGORIES,
-        startTimerUrl: N8N_CONFIG.startTimerUrl,
-        stopTimerUrl: N8N_CONFIG.stopTimerUrl,
-        apiKey: N8N_CONFIG.apiKey ? '***' + N8N_CONFIG.apiKey.slice(-4) : 'NOT SET',
-        timeout: API_CONFIG.timeout,
-        retryAttempts: API_CONFIG.retryAttempts
-    });
-
     try {
         // Populate category dropdown
         populateCategoryDropdown();
-        console.log('Category dropdown populated');
 
         // Get current user to set default category
         const member = await t.member('id', 'username', 'fullName');
-        console.log('Current user:', member);
         setDefaultCategory(member);
 
         // Set up event listeners
         setupEventListeners();
-        console.log('Event listeners set up');
 
         // Resize popup to fit content
         t.sizeTo('#popup-container').done();
-        console.log('Popup sized');
-        console.log('=== POPUP READY ===');
     } catch (error) {
-        console.error('=== ERROR INITIALIZING POPUP ===');
-        console.error('Error:', error);
-        console.error('Stack:', error.stack);
+        console.error('Error initializing popup:', error);
     }
 });
 
@@ -319,11 +302,7 @@ async function handleStartTimer() {
             throw new Error(`API returned ${response.status}: ${errorText}`);
         }
     } catch (error) {
-        console.error('=== ERROR STARTING TIMER ===');
-        console.error('Error type:', error.name);
-        console.error('Error message:', error.message);
-        console.error('Full error:', error);
-        console.error('Stack trace:', error.stack);
+        console.error('Error starting timer:', error);
 
         // Show error message
         showToast('Failed to start timer. Please try again.', 'error');
@@ -335,11 +314,6 @@ async function handleStartTimer() {
 
 // Make API call to N8N webhook
 async function makeApiCall(url, data, retries = API_CONFIG.retryAttempts) {
-    console.log(`makeApiCall: Attempt ${API_CONFIG.retryAttempts - retries + 1}/${API_CONFIG.retryAttempts + 1}`);
-    console.log('makeApiCall: URL:', url);
-    console.log('makeApiCall: Retries remaining:', retries);
-    console.log('makeApiCall: Timeout:', API_CONFIG.timeout, 'ms');
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         console.warn('Request timeout triggered');
@@ -347,8 +321,6 @@ async function makeApiCall(url, data, retries = API_CONFIG.retryAttempts) {
     }, API_CONFIG.timeout);
 
     try {
-        console.log('makeApiCall: Sending fetch request...');
-
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -361,15 +333,7 @@ async function makeApiCall(url, data, retries = API_CONFIG.retryAttempts) {
 
         clearTimeout(timeoutId);
 
-        console.log('makeApiCall: Response received:', {
-            status: response.status,
-            statusText: response.statusText,
-            ok: response.ok,
-            headers: Array.from(response.headers.entries())
-        });
-
         if (!response.ok && retries > 0) {
-            console.warn(`makeApiCall: Response not OK (${response.status}), retrying in ${API_CONFIG.retryDelay}ms...`);
             // Wait and retry
             await new Promise(resolve => setTimeout(resolve, API_CONFIG.retryDelay));
             return makeApiCall(url, data, retries - 1);
@@ -379,16 +343,9 @@ async function makeApiCall(url, data, retries = API_CONFIG.retryAttempts) {
     } catch (error) {
         clearTimeout(timeoutId);
 
-        console.error('makeApiCall: Fetch error caught:', {
-            name: error.name,
-            message: error.message,
-            stack: error.stack
-        });
-
         if (error.name === 'AbortError') {
-            console.error('makeApiCall: API call timed out after', API_CONFIG.timeout, 'ms');
+            console.error('API call timed out');
             if (retries > 0) {
-                console.log(`makeApiCall: Retrying after timeout... (${retries} retries left)`);
                 await new Promise(resolve => setTimeout(resolve, API_CONFIG.retryDelay));
                 return makeApiCall(url, data, retries - 1);
             }
@@ -396,12 +353,10 @@ async function makeApiCall(url, data, retries = API_CONFIG.retryAttempts) {
         }
 
         if (retries > 0) {
-            console.log(`makeApiCall: Retrying after error... (${retries} retries left)`);
             await new Promise(resolve => setTimeout(resolve, API_CONFIG.retryDelay));
             return makeApiCall(url, data, retries - 1);
         }
 
-        console.error('makeApiCall: No more retries, throwing error');
         throw error;
     }
 }

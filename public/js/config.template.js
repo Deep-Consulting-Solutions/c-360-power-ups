@@ -32,8 +32,9 @@ const USER_CATEGORY_MAPPING = {
 // N8N Webhook Configuration
 const N8N_CONFIG = {
     // Replace these with your actual N8N webhook URLs
-    startTimerUrl: 'https://your-n8n-instance.com/webhook/start-timer',
-    stopTimerUrl: 'https://your-n8n-instance.com/webhook/stop-timer',
+    startTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/start-timer',
+    stopTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/stop-timer',
+    createChildCardsUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/create-child-cards',
 
     // Replace with your actual API key
     // For production, consider using environment variables
