@@ -70,8 +70,8 @@ Edit `js/config.js` and update the N8N webhook URLs:
 
 ```javascript
 const N8N_CONFIG = {
-    startTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/start-timer',
-    stopTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/stop-timer',
+    startTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/start-timer',
+    stopTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/stop-timer',
     apiKey: 'your-api-key-here'
 };
 ```
@@ -282,7 +282,7 @@ console.log('Selected category:', selectedCategory);
 Test N8N webhooks using curl:
 
 ```bash
-curl -X POST https://c360-staging-flows.app.n8n.cloud/webhook/start-timer \
+curl -X POST https://c360-staging-flows.app.n8n.cloud/webhook/staging/start-timer \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-api-key-here" \
   -d '{"card": {...}, "user": {...}, "category": "Design", "timestamp": "2024-01-01T00:00:00.000Z"}'

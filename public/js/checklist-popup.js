@@ -2,8 +2,8 @@
 if (typeof N8N_CONFIG === 'undefined') {
     console.warn('N8N_CONFIG not found, using defaults');
     window.N8N_CONFIG = {
-        startTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/start-timer',
-        stopTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/stop-timer',
+        startTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/start-timer',
+        stopTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/stop-timer',
         createChildCardsUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/create-child-cards',
         apiKey: 'your-api-key-here'
     };
