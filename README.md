@@ -72,7 +72,7 @@ Edit `js/config.js` and update the N8N webhook URLs:
 const N8N_CONFIG = {
     startTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/start-timer',
     stopTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/stop-timer',
-    apiKey: 'your-api-key-here'
+    apiKey: 'your-api-key-here',
 };
 ```
 
