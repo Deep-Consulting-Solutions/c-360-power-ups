@@ -203,7 +203,7 @@ async function handleStopTimer(t) {
 
         // Show error message
         t.alert({
-            message: 'Failed to stop timer. Please try again.',
+            message: 'Unable to stop timer. Please check that your timer is running and your Harvest project is properly configured.',
             duration: 5,
             display: 'error'
         });
