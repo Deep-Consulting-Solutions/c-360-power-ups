@@ -170,7 +170,7 @@ window.TrelloPowerUp.initialize({
         if (timerRunning) {
             buttons.push({
                 icon: './start-timer.svg',
-                text: '⏱️ Timer Already Running DEV_TEST',
+                text: '⏱️ Timer Already Running ',
                 callback: function(t) {
                     return t.alert({
                         message: 'A timer is already running for this project. Stop it before starting a new one.',
@@ -183,7 +183,7 @@ window.TrelloPowerUp.initialize({
         } else {
             buttons.push({
                 icon: './start-timer.svg',
-                text: 'Start Harvest Timer DEV_TEST',
+                text: 'Start Harvest Timer ',
                 callback: handleStartTimer,
                 condition: 'always'
             });
@@ -192,7 +192,7 @@ window.TrelloPowerUp.initialize({
         // Stop Timer button - always shown
         buttons.push({
             icon: './stop-timer.svg',
-            text: 'Stop Harvest Timer DEV_TEST',
+            text: 'Stop Harvest Timer ',
             callback: handleStopTimer,
             condition: 'always'
         });
@@ -200,7 +200,7 @@ window.TrelloPowerUp.initialize({
         // Convert Checklist button - always shown
         buttons.push({
             icon: './create-child-cards.svg',
-            text: 'Convert Checklist Items to Cards DEV_TEST',
+            text: 'Convert Checklist Items to Cards ',
             callback: handleChecklistToCards,
             condition: 'always'
         });
