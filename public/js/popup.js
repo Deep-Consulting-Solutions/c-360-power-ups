@@ -117,13 +117,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         const member = await t.member('id', 'username', 'fullName');
         setDefaultCategory(member, categories);
 
+        // Get card details (name and labels)
+        const card = await t.card('name', 'labels');
+
+        // Get client name from first label
+        const clientName = card.labels && card.labels.length > 0 ? card.labels[0].name : null;
+        console.log('Card client label:', clientName || 'No label found');
+
         // Load Harvest projects (has its own error handling)
         try {
-            await loadHarvestProjects();
+            await loadHarvestProjects(clientName);
 
             // Auto-match project if successful
-            const card = await t.card('name');
-            autoMatchProject(card.name);
+            autoMatchProject(card.name, clientName);
         } catch (harvestError) {
             console.error('Harvest error:', harvestError);
             // loadHarvestProjects already shows error, don't call showProjectError again
@@ -181,8 +187,8 @@ function setDefaultCategory(member, categories) {
     }
 }
 
-// Load Harvest projects
-async function loadHarvestProjects() {
+// Load Harvest projects filtered by client
+async function loadHarvestProjects(clientName) {
     const projectLoading = document.getElementById('project-loading');
     const projectDropdown = document.getElementById('project-dropdown');
     const projectError = document.getElementById('project-error');
@@ -219,7 +225,27 @@ async function loadHarvestProjects() {
         harvestProjects = data.projects || [];
         console.log(`✓ Loaded ${harvestProjects.length} Harvest projects successfully`);
 
-        populateProjectDropdown(harvestProjects);
+        // Filter projects by client if client name is provided
+        let filteredProjects = harvestProjects;
+        if (clientName) {
+            filteredProjects = harvestProjects.filter(project =>
+                project.client && project.client.name === clientName
+            );
+            console.log(`✓ Filtered to ${filteredProjects.length} projects for client: ${clientName}`);
+        } else {
+            console.warn('No client label on card - showing all projects');
+        }
+
+        // Check if we have any projects to show
+        if (filteredProjects.length === 0) {
+            if (clientName) {
+                throw new Error(`No projects found for client: ${clientName}`);
+            } else {
+                throw new Error('No projects available');
+            }
+        }
+
+        populateProjectDropdown(filteredProjects);
 
         // Hide loading and error, show dropdown
         projectLoading.style.display = 'none';
@@ -235,6 +261,13 @@ async function loadHarvestProjects() {
         projectLoading.style.display = 'none';
         projectDropdown.style.display = 'none';
         projectError.style.display = 'block';
+
+        // Update error message to be more specific
+        const errorSpan = document.querySelector('#project-error .info-message span');
+        if (errorSpan) {
+            errorSpan.textContent = error.message;
+        }
+
         // Don't re-throw - error UI already shown to user
     }
 }
@@ -265,7 +298,7 @@ function populateProjectDropdown(projects) {
     });
 }
 
-function autoMatchProject(cardName) {
+function autoMatchProject(cardName, clientName) {
     try {
         console.log('Attempting to auto-match project for card:', cardName);
 
@@ -273,7 +306,16 @@ function autoMatchProject(cardName) {
         const matchInfo = document.getElementById('project-match-info');
         const matchedProjectName = document.getElementById('matched-project-name');
 
-        const matchedProject = harvestProjects.find(project =>
+        // Filter projects by client if provided
+        let projectsToSearch = harvestProjects;
+        if (clientName) {
+            projectsToSearch = harvestProjects.filter(project =>
+                project.client && project.client.name === clientName
+            );
+            console.log(`Searching within ${projectsToSearch.length} projects for client: ${clientName}`);
+        }
+
+        const matchedProject = projectsToSearch.find(project =>
             project.name.toLowerCase() === cardName.toLowerCase()
         );
 
@@ -282,10 +324,12 @@ function autoMatchProject(cardName) {
             selectElement.value = matchedProject.id;
 
             const option = selectElement.options[selectElement.selectedIndex];
-            selectedProject = JSON.parse(option.dataset.projectData);
+            if (option && option.dataset.projectData) {
+                selectedProject = JSON.parse(option.dataset.projectData);
 
-            matchedProjectName.textContent = matchedProject.name;
-            matchInfo.style.display = 'block';
+                matchedProjectName.textContent = matchedProject.name;
+                matchInfo.style.display = 'block';
+            }
 
             // Validate form (enables Start Timer button if category also selected)
             validateForm();
