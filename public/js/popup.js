@@ -1,15 +1,4 @@
 // Check if configuration is loaded, provide defaults if not
-if (typeof CATEGORIES === 'undefined') {
-    console.warn('CATEGORIES not found, using defaults');
-    window.CATEGORIES = [
-        'Copywriting',
-        'Project Management',
-        'Account Management',
-        'PR',
-        'Design'
-    ];
-}
-
 if (typeof USER_CATEGORY_MAPPING === 'undefined') {
     console.warn('USER_CATEGORY_MAPPING not found, using defaults');
     window.USER_CATEGORY_MAPPING = {};
@@ -50,13 +39,83 @@ const t = window.TrelloPowerUp.iframe();
 let harvestProjects = [];
 let selectedProject = null;
 
+// Load categories from Harvest tasks + USER_CATEGORY_MAPPING
+async function loadCategories() {
+    try {
+        // Check if Harvest is configured
+        if (!HARVEST_CONFIG.accessToken || !HARVEST_CONFIG.accountId) {
+            console.warn('Harvest API credentials not configured, using USER_CATEGORY_MAPPING only');
+            const mappedCategories = Object.values(USER_CATEGORY_MAPPING);
+            return [...new Set(mappedCategories)].sort();
+        }
+
+        // Fetch tasks directly from Harvest
+        console.log('Fetching Harvest tasks for categories...');
+        const response = await fetch(
+            `${HARVEST_CONFIG.apiBaseUrl}/tasks?is_active=true&per_page=2000`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${HARVEST_CONFIG.accessToken}`,
+                    'Harvest-Account-Id': HARVEST_CONFIG.accountId,
+                    'User-Agent': HARVEST_CONFIG.userAgent
+                },
+                signal: AbortSignal.timeout(10000)
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Harvest API returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        const tasks = data.tasks || [];
+        const harvestCategories = tasks.map(task => task.name);
+
+        console.log(`✓ Loaded ${harvestCategories.length} categories from Harvest`);
+
+        // Get unique categories from USER_CATEGORY_MAPPING values
+        const mappedCategories = Object.values(USER_CATEGORY_MAPPING);
+
+        // Merge: Harvest tasks + mapped categories (deduplicated)
+        const allCategories = [...new Set([...harvestCategories, ...mappedCategories])];
+
+        // Sort alphabetically
+        return allCategories.sort();
+    } catch (error) {
+        console.error('Error loading categories from Harvest:', error);
+
+        // Fall back to USER_CATEGORY_MAPPING values only
+        const mappedCategories = Object.values(USER_CATEGORY_MAPPING);
+        const uniqueCategories = [...new Set(mappedCategories)];
+
+        if (uniqueCategories.length > 0) {
+            console.warn(`Using ${uniqueCategories.length} categories from USER_CATEGORY_MAPPING as fallback`);
+            return uniqueCategories.sort();
+        }
+
+        // If all else fails, return empty array
+        console.error('No categories available');
+        return [];
+    }
+}
+
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async function() {
     try {
-        populateCategoryDropdown();
+        // Load categories from Harvest first
+        const categories = await loadCategories();
+
+        if (categories.length === 0) {
+            console.error('No categories available - cannot initialize popup');
+            alert('Unable to load task categories. Please check Harvest configuration.');
+            return;
+        }
+
+        // Populate dropdown with loaded categories
+        populateCategoryDropdown(categories);
 
         const member = await t.member('id', 'username', 'fullName');
-        setDefaultCategory(member);
+        setDefaultCategory(member, categories);
 
         // Load Harvest projects (has its own error handling)
         try {
@@ -83,12 +142,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-// Populate category dropdown with predefined categories + Custom option
-function populateCategoryDropdown() {
+// Populate category dropdown with categories from Harvest + Custom option
+function populateCategoryDropdown(categories) {
     const selectElement = document.getElementById('category-select');
 
-    // Add predefined categories
-    CATEGORIES.forEach(category => {
+    // Clear existing options first
+    selectElement.innerHTML = '<option value="">-- Select Category --</option>';
+
+    // Add categories from Harvest
+    categories.forEach(category => {
         const option = document.createElement('option');
         option.value = category;
         option.textContent = category;
@@ -99,11 +161,11 @@ function populateCategoryDropdown() {
     const customOption = document.createElement('option');
     customOption.value = '__CUSTOM__';
     customOption.textContent = '+ Add New Category';
-    selectElement.appendChild(customOption);
+    // selectElement.appendChild(customOption);
 }
 
 // Set default category based on user mapping
-function setDefaultCategory(member) {
+function setDefaultCategory(member, categories) {
     const selectElement = document.getElementById('category-select');
 
     // Try to find mapping by user ID first, then by username
@@ -111,8 +173,9 @@ function setDefaultCategory(member) {
                           USER_CATEGORY_MAPPING[member.username] ||
                           '';
 
-    if (defaultCategory && CATEGORIES.includes(defaultCategory)) {
+    if (defaultCategory && categories.includes(defaultCategory)) {
         selectElement.value = defaultCategory;
+        console.log(`✓ Default category set to: ${defaultCategory}`);
         // Enable the start button if a default category is set
         validateForm();
     }
