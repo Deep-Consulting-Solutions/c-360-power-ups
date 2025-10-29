@@ -42,16 +42,8 @@ const configContent = `// Configuration file for C-360 Timer Power-Up
 // Generated at: ${new Date().toISOString()}
 // Environment: ${ENVIRONMENT}
 
-// Task categories for your team
-const CATEGORIES = [
-    'Copywriting',
-    'Project Management',
-    'Account Management',
-    'PR',
-    'Design'
-];
-
 // User ID to default category mapping
+// Categories are now fetched dynamically from Harvest tasks
 // Map Trello user IDs to their primary role categories
 const USER_CATEGORY_MAPPING = {
     // Examples - replace with actual Trello user IDs
@@ -92,7 +84,6 @@ const API_CONFIG = {
 // Export for use in other modules (if using module system)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        CATEGORIES,
         USER_CATEGORY_MAPPING,
         N8N_CONFIG,
         HARVEST_CONFIG,

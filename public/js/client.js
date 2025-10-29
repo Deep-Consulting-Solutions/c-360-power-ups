@@ -32,29 +32,135 @@ if (typeof API_CONFIG === 'undefined') {
 let harvestProjectsCache = null;
 let harvestProjectsFetchPromise = null;
 
+// Cached Harvest tasks
+let harvestTasksCache = null;
+let harvestTasksFetchPromise = null;
+
+// Check if there's a running timer for this card
+async function checkRunningTimer(t) {
+    try {
+        // Check if Harvest is configured
+        if (!HARVEST_CONFIG.accessToken || !HARVEST_CONFIG.accountId) {
+            console.warn('Harvest API credentials not configured for timer check');
+            return null;
+        }
+
+        // Get card details
+        const card = await t.card('name', 'labels');
+
+        // Get client name from first label
+        const clientLabel = card.labels && card.labels.length > 0 ? card.labels[0].name : null;
+
+        // If no client label, can't match timer
+        if (!clientLabel) {
+            console.log('No client label found on card, skipping timer check');
+            return null;
+        }
+
+        const projectName = card.name;
+
+        // Query Harvest for running timers (admin token can see all team timers)
+        const response = await fetch(
+            `${HARVEST_CONFIG.apiBaseUrl}/time_entries?is_running=true`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${HARVEST_CONFIG.accessToken}`,
+                    'Harvest-Account-Id': HARVEST_CONFIG.accountId,
+                    'User-Agent': HARVEST_CONFIG.userAgent
+                },
+                signal: AbortSignal.timeout(5000) // 5 second timeout for badge checks
+            }
+        );
+
+        if (!response.ok) {
+            console.warn(`Harvest API returned ${response.status} for timer check`);
+            return null;
+        }
+
+        const data = await response.json();
+        const runningTimers = data.time_entries || [];
+
+        // Find timer matching this card's client + project
+        const matchingTimer = runningTimers.find(timer => {
+            const clientMatch = timer.client && timer.client.name === clientLabel;
+            const projectMatch = timer.project && timer.project.name === projectName;
+            return clientMatch && projectMatch;
+        });
+
+        if (matchingTimer) {
+            console.log(`✓ Running timer found for card: ${projectName} (${clientLabel})`);
+            return {
+                text: '⏱️ Timer Running',
+                color: 'green'
+            };
+        }
+
+        // No matching timer found
+        return null;
+
+    } catch (error) {
+        // Fail silently - don't show badge on errors
+        console.warn('Error checking running timer:', error.message);
+        return null;
+    }
+}
+
 // Initialize Trello Power-Up
 window.TrelloPowerUp.initialize({
-    'card-buttons': function(t, options) {
-        return [
-            {
+    'card-buttons': async function(t, options) {
+        // Check if timer is already running
+        const timerRunning = await checkRunningTimer(t);
+
+        const buttons = [];
+
+        // Start Timer button - disabled if timer already running
+        if (timerRunning) {
+            buttons.push({
                 icon: './start-timer.svg',
-                text: 'Start Harvest Timer',
+                text: '⏱️ Timer Already Running',
+                callback: function(t) {
+                    return t.alert({
+                        message: 'A timer is already running for this project. Stop it before starting a new one.',
+                        duration: 4,
+                        display: 'warning'
+                    });
+                },
+                condition: 'always'
+            });
+        } else {
+            buttons.push({
+                icon: './start-timer.svg',
+                text: 'Start Harvest Timer LOCAL_TEST',
                 callback: handleStartTimer,
                 condition: 'always'
+            });
+        }
+
+        // Stop Timer button - always shown
+        buttons.push({
+            icon: './stop-timer.svg',
+            text: 'Stop Harvest Timer LOCAL_TEST',
+            callback: handleStopTimer,
+            condition: 'always'
+        });
+
+        // Convert Checklist button - always shown
+        buttons.push({
+            icon: './create-child-cards.svg',
+            text: 'Convert Checklist Items to Cards',
+            callback: handleChecklistToCards,
+            condition: 'always'
+        });
+
+        return buttons;
+    },
+    'card-badges': function(t, options) {
+        return [{
+            dynamic: function() {
+                return checkRunningTimer(t);
             },
-            {
-                icon: './stop-timer.svg',
-                text: 'Stop Harvest Timer',
-                callback: handleStopTimer,
-                condition: 'always'
-            },
-            {
-                icon: './create-child-cards.svg',
-                text: 'Convert Checklist Items to Cards',
-                callback: handleChecklistToCards,
-                condition: 'always'
-            }
-        ];
+            refresh: 10 // Refresh every 10 seconds (Trello minimum)
+        }];
     }
 });
 
@@ -110,9 +216,66 @@ async function fetchHarvestProjects() {
     return harvestProjectsFetchPromise;
 }
 
+// Fetch and cache Harvest tasks
+async function fetchHarvestTasks() {
+    // If already fetching, return existing promise
+    if (harvestTasksFetchPromise) {
+        return harvestTasksFetchPromise;
+    }
+
+    // If already cached, return cache
+    if (harvestTasksCache) {
+        return harvestTasksCache;
+    }
+
+    // Check if Harvest is configured
+    if (!HARVEST_CONFIG.accessToken || !HARVEST_CONFIG.accountId) {
+        console.warn('Harvest API credentials not configured');
+        return [];
+    }
+
+    harvestTasksFetchPromise = (async () => {
+        try {
+            console.log('Fetching Harvest tasks...');
+
+            const response = await fetch(
+                `${HARVEST_CONFIG.apiBaseUrl}/tasks?is_active=true&per_page=2000`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${HARVEST_CONFIG.accessToken}`,
+                        'Harvest-Account-Id': HARVEST_CONFIG.accountId,
+                        'User-Agent': HARVEST_CONFIG.userAgent
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Harvest API returned ${response.status}`);
+            }
+
+            const data = await response.json();
+            harvestTasksCache = data.tasks || [];
+            console.log(`✓ Cached ${harvestTasksCache.length} Harvest tasks`);
+
+            return harvestTasksCache;
+        } catch (error) {
+            console.error('Failed to fetch Harvest tasks:', error);
+            harvestTasksFetchPromise = null; // Reset to allow retry
+            throw error;
+        }
+    })();
+
+    return harvestTasksFetchPromise;
+}
+
 // Initialize Harvest projects cache on Power-Up load
 fetchHarvestProjects().catch(err => {
     console.warn('Initial Harvest fetch failed, will retry on popup open:', err);
+});
+
+// Initialize Harvest tasks cache on Power-Up load
+fetchHarvestTasks().catch(err => {
+    console.warn('Initial Harvest tasks fetch failed, will retry on popup open:', err);
 });
 
 // Handle Start Timer button click

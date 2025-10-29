@@ -1,6 +1,6 @@
 // Configuration file for C-360 Timer Power-Up
 // This file is auto-generated during build - DO NOT EDIT MANUALLY
-// Generated at: 2025-10-27T21:06:34.992Z
+// Generated at: 2025-10-29T05:31:53.544Z
 // Environment: staging
 
 // Task categories for your team
@@ -32,13 +32,13 @@ const N8N_CONFIG = {
     startTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/start-timer',
     stopTimerUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/stop-timer',
     createChildCardsUrl: 'https://c360-staging-flows.app.n8n.cloud/webhook/staging/create-child-cards',
-    apiKey: ''
+    apiKey: 'pyuO7lPDzbIZePkKNMEhgr7kVg3aG2LF'
 };
 
 // Harvest API Configuration (injected from environment variables)
 const HARVEST_CONFIG = {
-    accessToken: '',
-    accountId: '',
+    accessToken: '4082558.pt.c3-mWRKIKCXBbANjq_ftbD4UciPKlt6cYzmZe9KW8VPOBQ5WG61tYvUkRV83vWOVyu5P-O8Loq5rEmtmZ9NVew',
+    accountId: '2037905',
     apiBaseUrl: 'https://api.harvestapp.com/v2',
     userAgent: 'C360-Trello-Timer (trello@c360.com)'
 };
