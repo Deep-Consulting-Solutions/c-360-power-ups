@@ -1,15 +1,7 @@
 // Configuration file for C-360 Timer Power-Up
 
-// Task categories for your team
-const CATEGORIES = [
-    'Copywriting',
-    'Project Management',
-    'Account Management',
-    'PR',
-    'Design'
-];
-
 // User ID to default category mapping
+// Categories are now fetched dynamically from Harvest tasks
 // Map Trello user IDs to their primary role categories
 // To find user IDs:
 // 1. Open a card where the user is a member
@@ -29,6 +21,16 @@ const USER_CATEGORY_MAPPING = {
     // 'janedoe': 'Design',
 };
 
+// Trello to Harvest User ID Mapping (for multi-user timer support)
+// Maps Trello usernames to Harvest user IDs
+// This is used as a fallback when email matching fails
+// Format: { 'trello_username': harvest_user_id }
+const TRELLO_HARVEST_USER_MAPPINGS = {
+    // Examples - replace with actual mappings
+    // 'johndoe': 12345,
+    // 'janedoe': 12346,
+};
+
 // N8N Webhook Configuration
 const N8N_CONFIG = {
     // Replace these with your actual N8N webhook URLs
@@ -41,6 +43,14 @@ const N8N_CONFIG = {
     apiKey: 'your-api-key-here'
 };
 
+// Harvest API Configuration
+const HARVEST_CONFIG = {
+    accessToken: 'your_harvest_personal_access_token',
+    accountId: 'your_harvest_account_id',
+    apiBaseUrl: 'https://api.harvestapp.com/v2',
+    userAgent: 'C360-Trello-Timer'
+};
+
 // API Request Configuration
 const API_CONFIG = {
     timeout: 10000, // 10 seconds timeout
@@ -51,9 +61,10 @@ const API_CONFIG = {
 // Export for use in other modules (if using module system)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        CATEGORIES,
         USER_CATEGORY_MAPPING,
+        TRELLO_HARVEST_USER_MAPPINGS,
         N8N_CONFIG,
+        HARVEST_CONFIG,
         API_CONFIG
     };
 }

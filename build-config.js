@@ -27,6 +27,20 @@ if (fs.existsSync(envPath)) {
 // Read environment variables
 const ENVIRONMENT = process.env.ENVIRONMENT || 'staging';
 const N8N_API_KEY = process.env.N8N_API_KEY || 'your-api-key-here';
+const HARVEST_ACCESS_TOKEN = process.env.HARVEST_ACCESS_TOKEN || '';
+const HARVEST_ACCOUNT_ID = process.env.HARVEST_ACCOUNT_ID || '';
+
+// Parse Trello to Harvest user mappings (JSON format in env var)
+// Example: TRELLO_HARVEST_USER_MAPPINGS={"johndoe":12345,"janedoe":12346}
+let TRELLO_HARVEST_USER_MAPPINGS = {};
+if (process.env.TRELLO_HARVEST_USER_MAPPINGS) {
+    try {
+        TRELLO_HARVEST_USER_MAPPINGS = JSON.parse(process.env.TRELLO_HARVEST_USER_MAPPINGS);
+        console.log('User mappings loaded:', Object.keys(TRELLO_HARVEST_USER_MAPPINGS).length, 'users');
+    } catch (e) {
+        console.warn('Failed to parse TRELLO_HARVEST_USER_MAPPINGS:', e.message);
+    }
+}
 
 // Determine N8N URLs based on environment
 const N8N_BASE_URL = 'https://c360-staging-flows.app.n8n.cloud/webhook';
@@ -40,16 +54,8 @@ const configContent = `// Configuration file for C-360 Timer Power-Up
 // Generated at: ${new Date().toISOString()}
 // Environment: ${ENVIRONMENT}
 
-// Task categories for your team
-const CATEGORIES = [
-    'Copywriting',
-    'Project Management',
-    'Account Management',
-    'PR',
-    'Design'
-];
-
 // User ID to default category mapping
+// Categories are now fetched dynamically from Harvest tasks
 // Map Trello user IDs to their primary role categories
 const USER_CATEGORY_MAPPING = {
     // Examples - replace with actual Trello user IDs
@@ -64,12 +70,25 @@ const USER_CATEGORY_MAPPING = {
     // 'janedoe': 'Design',
 };
 
+// Trello to Harvest User ID Mapping (for multi-user timer support)
+// Maps Trello usernames to Harvest user IDs
+// This is used as a fallback when email matching fails
+const TRELLO_HARVEST_USER_MAPPINGS = ${JSON.stringify(TRELLO_HARVEST_USER_MAPPINGS, null, 4)};
+
 // N8N Webhook Configuration (injected from environment variables)
 const N8N_CONFIG = {
     startTimerUrl: '${START_TIMER_URL}',
     stopTimerUrl: '${STOP_TIMER_URL}',
     createChildCardsUrl: '${CREATE_CHILD_CARDS_URL}',
     apiKey: '${N8N_API_KEY}'
+};
+
+// Harvest API Configuration (injected from environment variables)
+const HARVEST_CONFIG = {
+    accessToken: '${HARVEST_ACCESS_TOKEN}',
+    accountId: '${HARVEST_ACCOUNT_ID}',
+    apiBaseUrl: 'https://api.harvestapp.com/v2',
+    userAgent: 'C360-Trello-Timer (trello@c360.com)'
 };
 
 // API Request Configuration
@@ -82,9 +101,10 @@ const API_CONFIG = {
 // Export for use in other modules (if using module system)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        CATEGORIES,
         USER_CATEGORY_MAPPING,
+        TRELLO_HARVEST_USER_MAPPINGS,
         N8N_CONFIG,
+        HARVEST_CONFIG,
         API_CONFIG
     };
 }
@@ -99,4 +119,5 @@ console.log(`  Environment: ${ENVIRONMENT}`);
 console.log(`  Start Timer URL: ${START_TIMER_URL}`);
 console.log(`  Stop Timer URL: ${STOP_TIMER_URL}`);
 console.log(`  Convert Checklist Items to Cards URL: ${CREATE_CHILD_CARDS_URL}`);
+console.log(`  Harvest Account ID: ${HARVEST_ACCOUNT_ID ? 'Set' : 'NOT SET'}`);
 console.log(`  Output: ${outputPath}`);
