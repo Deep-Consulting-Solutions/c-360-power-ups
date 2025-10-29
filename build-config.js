@@ -30,6 +30,18 @@ const N8N_API_KEY = process.env.N8N_API_KEY || 'your-api-key-here';
 const HARVEST_ACCESS_TOKEN = process.env.HARVEST_ACCESS_TOKEN || '';
 const HARVEST_ACCOUNT_ID = process.env.HARVEST_ACCOUNT_ID || '';
 
+// Parse Trello to Harvest user mappings (JSON format in env var)
+// Example: TRELLO_HARVEST_USER_MAPPINGS={"johndoe":12345,"janedoe":12346}
+let TRELLO_HARVEST_USER_MAPPINGS = {};
+if (process.env.TRELLO_HARVEST_USER_MAPPINGS) {
+    try {
+        TRELLO_HARVEST_USER_MAPPINGS = JSON.parse(process.env.TRELLO_HARVEST_USER_MAPPINGS);
+        console.log('User mappings loaded:', Object.keys(TRELLO_HARVEST_USER_MAPPINGS).length, 'users');
+    } catch (e) {
+        console.warn('Failed to parse TRELLO_HARVEST_USER_MAPPINGS:', e.message);
+    }
+}
+
 // Determine N8N URLs based on environment
 const N8N_BASE_URL = 'https://c360-staging-flows.app.n8n.cloud/webhook';
 const START_TIMER_URL = `${N8N_BASE_URL}/${ENVIRONMENT}/start-timer`;
@@ -58,6 +70,11 @@ const USER_CATEGORY_MAPPING = {
     // 'janedoe': 'Design',
 };
 
+// Trello to Harvest User ID Mapping (for multi-user timer support)
+// Maps Trello usernames to Harvest user IDs
+// This is used as a fallback when email matching fails
+const TRELLO_HARVEST_USER_MAPPINGS = ${JSON.stringify(TRELLO_HARVEST_USER_MAPPINGS, null, 4)};
+
 // N8N Webhook Configuration (injected from environment variables)
 const N8N_CONFIG = {
     startTimerUrl: '${START_TIMER_URL}',
@@ -85,6 +102,7 @@ const API_CONFIG = {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         USER_CATEGORY_MAPPING,
+        TRELLO_HARVEST_USER_MAPPINGS,
         N8N_CONFIG,
         HARVEST_CONFIG,
         API_CONFIG

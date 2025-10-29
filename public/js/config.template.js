@@ -21,6 +21,16 @@ const USER_CATEGORY_MAPPING = {
     // 'janedoe': 'Design',
 };
 
+// Trello to Harvest User ID Mapping (for multi-user timer support)
+// Maps Trello usernames to Harvest user IDs
+// This is used as a fallback when email matching fails
+// Format: { 'trello_username': harvest_user_id }
+const TRELLO_HARVEST_USER_MAPPINGS = {
+    // Examples - replace with actual mappings
+    // 'johndoe': 12345,
+    // 'janedoe': 12346,
+};
+
 // N8N Webhook Configuration
 const N8N_CONFIG = {
     // Replace these with your actual N8N webhook URLs
@@ -52,6 +62,7 @@ const API_CONFIG = {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         USER_CATEGORY_MAPPING,
+        TRELLO_HARVEST_USER_MAPPINGS,
         N8N_CONFIG,
         HARVEST_CONFIG,
         API_CONFIG

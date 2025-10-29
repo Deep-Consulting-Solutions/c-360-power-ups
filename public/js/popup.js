@@ -39,6 +39,139 @@ const t = window.TrelloPowerUp.iframe();
 let harvestProjects = [];
 let selectedProject = null;
 
+// Harvest users cache (for user ID resolution - same as client.js)
+let harvestUsersCache = null;
+
+// Fetch Harvest users
+async function fetchHarvestUsers() {
+    if (harvestUsersCache) {
+        return harvestUsersCache;
+    }
+
+    if (!HARVEST_CONFIG.accessToken || !HARVEST_CONFIG.accountId) {
+        console.warn('Harvest API credentials not configured');
+        return [];
+    }
+
+    try {
+        const response = await fetch(
+            `${HARVEST_CONFIG.apiBaseUrl}/users?is_active=true&per_page=2000`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${HARVEST_CONFIG.accessToken}`,
+                    'Harvest-Account-Id': HARVEST_CONFIG.accountId,
+                    'User-Agent': HARVEST_CONFIG.userAgent
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Harvest API returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        harvestUsersCache = data.users || [];
+        return harvestUsersCache;
+    } catch (error) {
+        console.error('Failed to fetch Harvest users:', error);
+        return [];
+    }
+}
+
+// Resolve Trello user to Harvest user ID (same logic as client.js)
+async function resolveHarvestUserId(trelloMember) {
+    try {
+        const harvestUsers = await fetchHarvestUsers();
+
+        if (!harvestUsers || harvestUsers.length === 0) {
+            console.warn('No Harvest users available for matching');
+            return null;
+        }
+
+        // Strategy 1: Match by email (preferred)
+        if (trelloMember.email) {
+            const emailMatch = harvestUsers.find(hUser =>
+                hUser.email && hUser.email.toLowerCase() === trelloMember.email.toLowerCase()
+            );
+
+            if (emailMatch) {
+                console.log(`✓ Matched by email: ${trelloMember.username} → ${emailMatch.first_name} ${emailMatch.last_name} (ID: ${emailMatch.id})`);
+                return emailMatch.id;
+            }
+        }
+
+        // Strategy 2: Use config mapping (fallback)
+        if (typeof TRELLO_HARVEST_USER_MAPPINGS !== 'undefined') {
+            if (TRELLO_HARVEST_USER_MAPPINGS[trelloMember.username]) {
+                const harvestUserId = TRELLO_HARVEST_USER_MAPPINGS[trelloMember.username];
+                console.log(`✓ Matched by username config: ${trelloMember.username} → ${harvestUserId}`);
+                return harvestUserId;
+            }
+
+            if (TRELLO_HARVEST_USER_MAPPINGS[trelloMember.id]) {
+                const harvestUserId = TRELLO_HARVEST_USER_MAPPINGS[trelloMember.id];
+                console.log(`✓ Matched by user ID config: ${trelloMember.id} → ${harvestUserId}`);
+                return harvestUserId;
+            }
+        }
+
+        console.warn(`Unable to resolve Harvest user ID for: ${trelloMember.username}`);
+        return null;
+    } catch (error) {
+        console.error('Error resolving Harvest user ID:', error);
+        return null;
+    }
+}
+
+// Check if user has any running timer
+async function checkUserHasAnyRunningTimer(trelloMember) {
+    try {
+        if (!HARVEST_CONFIG.accessToken || !HARVEST_CONFIG.accountId) {
+            return null;
+        }
+
+        const harvestUserId = await resolveHarvestUserId(trelloMember);
+
+        if (!harvestUserId) {
+            return null;
+        }
+
+        const response = await fetch(
+            `${HARVEST_CONFIG.apiBaseUrl}/time_entries?is_running=true&user_id=${harvestUserId}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${HARVEST_CONFIG.accessToken}`,
+                    'Harvest-Account-Id': HARVEST_CONFIG.accountId,
+                    'User-Agent': HARVEST_CONFIG.userAgent
+                },
+                signal: AbortSignal.timeout(5000)
+            }
+        );
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const data = await response.json();
+        const runningTimers = data.time_entries || [];
+
+        if (runningTimers.length > 0) {
+            const timer = runningTimers[0];
+            return {
+                project: timer.project ? timer.project.name : 'Unknown Project',
+                client: timer.client ? timer.client.name : 'Unknown Client',
+                task: timer.task ? timer.task.name : 'Unknown Task',
+                notes: timer.notes || ''
+            };
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Error checking for running timers:', error);
+        return null;
+    }
+}
+
 // Helper function to detect if card is a child card (has Trello card attachment)
 function getParentCardAttachment(card) {
     console.log('=== CHECKING FOR PARENT CARD ATTACHMENT ===');
@@ -691,6 +824,21 @@ async function handleStartTimer() {
             boardName: board.name,
             listName: list.name
         });
+
+        // Check if user is mapped to Harvest
+        console.log('Checking user mapping to Harvest...');
+        const harvestUserId = await resolveHarvestUserId(member);
+
+        if (!harvestUserId) {
+            // User not mapped to Harvest
+            console.warn(`User ${member.username} not mapped to Harvest`);
+            showToast(`Timer not configured for your account (${member.username}). Please contact your administrator to add your Harvest mapping.`, 'error');
+            setLoadingState(false);
+            return;
+        }
+
+        console.log(`User ${member.username} mapped to Harvest user ID: ${harvestUserId}`);
+        console.log('Proceeding to start timer - Harvest will automatically stop any existing timer');
 
         // Prepare the payload
         const payload = {
