@@ -130,7 +130,7 @@ window.TrelloPowerUp.initialize({
         } else {
             buttons.push({
                 icon: './start-timer.svg',
-                text: 'Start Harvest Timer LOCAL_TEST',
+                text: 'Start Harvest Timer ',
                 callback: handleStartTimer,
                 condition: 'always'
             });
@@ -139,7 +139,7 @@ window.TrelloPowerUp.initialize({
         // Stop Timer button - always shown
         buttons.push({
             icon: './stop-timer.svg',
-            text: 'Stop Harvest Timer LOCAL_TEST',
+            text: 'Stop Harvest Timer ',
             callback: handleStopTimer,
             condition: 'always'
         });
