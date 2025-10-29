@@ -36,6 +36,47 @@ let harvestProjectsFetchPromise = null;
 let harvestTasksCache = null;
 let harvestTasksFetchPromise = null;
 
+// Helper function to detect if card is a child card (has Trello card attachment)
+function getParentCardAttachment(card) {
+    if (!card.attachments || card.attachments.length === 0) {
+        return null;
+    }
+
+    // Find attachment that is a Trello card URL
+    const parentAttachment = card.attachments.find(attachment => {
+        return attachment.url && attachment.url.includes('trello.com/c/');
+    });
+
+    return parentAttachment || null;
+}
+
+// Extract parent card name from Trello attachment URL
+function getParentCardNameFromAttachment(parentAttachment) {
+    if (!parentAttachment || !parentAttachment.url) {
+        return null;
+    }
+
+    // Extract from URL slug
+    // URL format: https://trello.com/c/CARD_ID/NUMBER-card-name-slug
+    const urlParts = parentAttachment.url.split('/');
+    const nameSlug = urlParts[urlParts.length - 1];
+
+    if (!nameSlug) {
+        return null;
+    }
+
+    // Remove card number prefix (e.g., "659-esa-campaign" -> "esa-campaign")
+    const slugWithoutNumber = nameSlug.replace(/^\d+-/, '');
+
+    // Convert kebab-case to Title Case
+    const extractedName = slugWithoutNumber
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+
+    return extractedName;
+}
+
 // Check if there's a running timer for this card
 async function checkRunningTimer(t) {
     try {
@@ -45,8 +86,8 @@ async function checkRunningTimer(t) {
             return null;
         }
 
-        // Get card details
-        const card = await t.card('name', 'labels');
+        // Get card details (including attachments for child card detection)
+        const card = await t.card('name', 'labels', 'attachments');
 
         // Get client name from first label
         const clientLabel = card.labels && card.labels.length > 0 ? card.labels[0].name : null;
@@ -57,6 +98,16 @@ async function checkRunningTimer(t) {
             return null;
         }
 
+        // Check if this is a child card - badges only show on parent cards
+        const parentAttachment = getParentCardAttachment(card);
+
+        if (parentAttachment) {
+            // This is a child card - don't show badge (parent will show it)
+            console.log(`Child card detected (${card.name}) - no badge on child cards`);
+            return null;
+        }
+
+        // This is a parent/regular card - check for running timer
         const projectName = card.name;
 
         // Query Harvest for running timers (admin token can see all team timers)
@@ -80,10 +131,12 @@ async function checkRunningTimer(t) {
         const data = await response.json();
         const runningTimers = data.time_entries || [];
 
-        // Find timer matching this card's client + project
+        // Find timer matching this card's client + project (case-insensitive)
         const matchingTimer = runningTimers.find(timer => {
-            const clientMatch = timer.client && timer.client.name === clientLabel;
-            const projectMatch = timer.project && timer.project.name === projectName;
+            const clientMatch = timer.client &&
+                timer.client.name.toLowerCase() === clientLabel.toLowerCase();
+            const projectMatch = timer.project &&
+                timer.project.name.toLowerCase() === projectName.toLowerCase();
             return clientMatch && projectMatch;
         });
 
@@ -117,7 +170,7 @@ window.TrelloPowerUp.initialize({
         if (timerRunning) {
             buttons.push({
                 icon: './start-timer.svg',
-                text: '⏱️ Timer Already Running',
+                text: '⏱️ Timer Already Running DEV_TEST',
                 callback: function(t) {
                     return t.alert({
                         message: 'A timer is already running for this project. Stop it before starting a new one.',
@@ -130,7 +183,7 @@ window.TrelloPowerUp.initialize({
         } else {
             buttons.push({
                 icon: './start-timer.svg',
-                text: 'Start Harvest Timer ',
+                text: 'Start Harvest Timer DEV_TEST',
                 callback: handleStartTimer,
                 condition: 'always'
             });
@@ -139,7 +192,7 @@ window.TrelloPowerUp.initialize({
         // Stop Timer button - always shown
         buttons.push({
             icon: './stop-timer.svg',
-            text: 'Stop Harvest Timer ',
+            text: 'Stop Harvest Timer DEV_TEST',
             callback: handleStopTimer,
             condition: 'always'
         });
@@ -147,7 +200,7 @@ window.TrelloPowerUp.initialize({
         // Convert Checklist button - always shown
         buttons.push({
             icon: './create-child-cards.svg',
-            text: 'Convert Checklist Items to Cards',
+            text: 'Convert Checklist Items to Cards DEV_TEST',
             callback: handleChecklistToCards,
             condition: 'always'
         });

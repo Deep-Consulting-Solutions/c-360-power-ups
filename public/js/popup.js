@@ -39,38 +39,123 @@ const t = window.TrelloPowerUp.iframe();
 let harvestProjects = [];
 let selectedProject = null;
 
+// Helper function to detect if card is a child card (has Trello card attachment)
+function getParentCardAttachment(card) {
+    console.log('=== CHECKING FOR PARENT CARD ATTACHMENT ===');
+    console.log('Card attachments:', card.attachments);
+    console.log('Number of attachments:', card.attachments ? card.attachments.length : 0);
+
+    if (!card.attachments || card.attachments.length === 0) {
+        console.log('❌ No attachments found on card');
+        return null;
+    }
+
+    // Log all attachments for debugging
+    card.attachments.forEach((att, index) => {
+        console.log(`Attachment ${index + 1}:`, {
+            name: att.name,
+            url: att.url,
+            isTrelloCard: att.url && att.url.includes('trello.com/c/')
+        });
+    });
+
+    // Find attachment that is a Trello card URL
+    const parentAttachment = card.attachments.find(attachment => {
+        return attachment.url && attachment.url.includes('trello.com/c/');
+    });
+
+    if (parentAttachment) {
+        console.log('✓ Found parent card attachment:', parentAttachment);
+    } else {
+        console.log('❌ No Trello card attachment found');
+    }
+
+    return parentAttachment || null;
+}
+
+// Extract parent card name from Trello attachment URL
+function getParentCardNameFromAttachment(parentAttachment) {
+    console.log('=== EXTRACTING PARENT CARD NAME ===');
+    console.log('Parent attachment URL:', parentAttachment.url);
+
+    if (!parentAttachment || !parentAttachment.url) {
+        console.log('❌ No parent attachment or URL provided');
+        return null;
+    }
+
+    // Extract from URL slug
+    // URL format: https://trello.com/c/CARD_ID/NUMBER-card-name-slug
+    const urlParts = parentAttachment.url.split('/');
+    const nameSlug = urlParts[urlParts.length - 1];
+    console.log('URL slug:', nameSlug);
+
+    if (!nameSlug) {
+        console.error('❌ Could not extract slug from URL');
+        return null;
+    }
+
+    // Remove card number prefix (e.g., "659-esa-campaign" -> "esa-campaign")
+    const slugWithoutNumber = nameSlug.replace(/^\d+-/, '');
+    console.log('Slug without number:', slugWithoutNumber);
+
+    // Convert kebab-case to Title Case
+    const extractedName = slugWithoutNumber
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+
+    console.log('✓ Extracted parent card name:', extractedName);
+    return extractedName;
+}
+
 // Load categories from Harvest tasks + USER_CATEGORY_MAPPING
 async function loadCategories() {
     try {
-        // Check if Harvest is configured
-        if (!HARVEST_CONFIG.accessToken || !HARVEST_CONFIG.accountId) {
-            console.warn('Harvest API credentials not configured, using USER_CATEGORY_MAPPING only');
-            const mappedCategories = Object.values(USER_CATEGORY_MAPPING);
-            return [...new Set(mappedCategories)].sort();
-        }
+        console.log('Loading categories...');
 
-        // Fetch tasks directly from Harvest
-        console.log('Fetching Harvest tasks for categories...');
-        const response = await fetch(
-            `${HARVEST_CONFIG.apiBaseUrl}/tasks?is_active=true&per_page=2000`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${HARVEST_CONFIG.accessToken}`,
-                    'Harvest-Account-Id': HARVEST_CONFIG.accountId,
-                    'User-Agent': HARVEST_CONFIG.userAgent
-                },
-                signal: AbortSignal.timeout(10000)
+        // Try to get tasks from parent window cache first (faster!)
+        let tasks = [];
+        try {
+            if (window.parent && window.parent.fetchHarvestTasks) {
+                console.log('Using cached Harvest tasks from parent window');
+                tasks = await window.parent.fetchHarvestTasks();
             }
-        );
-
-        if (!response.ok) {
-            throw new Error(`Harvest API returned ${response.status}`);
+        } catch (cacheError) {
+            console.warn('Could not access parent cache, fetching directly:', cacheError);
         }
 
-        const data = await response.json();
-        const tasks = data.tasks || [];
-        const harvestCategories = tasks.map(task => task.name);
+        // If no cached tasks, fetch directly
+        if (tasks.length === 0) {
+            // Check if Harvest is configured
+            if (!HARVEST_CONFIG.accessToken || !HARVEST_CONFIG.accountId) {
+                console.warn('Harvest API credentials not configured, using USER_CATEGORY_MAPPING only');
+                const mappedCategories = Object.values(USER_CATEGORY_MAPPING);
+                return [...new Set(mappedCategories)].sort();
+            }
 
+            // Fetch tasks directly from Harvest
+            console.log('Fetching Harvest tasks for categories...');
+            const response = await fetch(
+                `${HARVEST_CONFIG.apiBaseUrl}/tasks?is_active=true&per_page=2000`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${HARVEST_CONFIG.accessToken}`,
+                        'Harvest-Account-Id': HARVEST_CONFIG.accountId,
+                        'User-Agent': HARVEST_CONFIG.userAgent
+                    },
+                    signal: AbortSignal.timeout(10000)
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Harvest API returned ${response.status}`);
+            }
+
+            const data = await response.json();
+            tasks = data.tasks || [];
+        }
+
+        const harvestCategories = tasks.map(task => task.name);
         console.log(`✓ Loaded ${harvestCategories.length} categories from Harvest`);
 
         // Get unique categories from USER_CATEGORY_MAPPING values
@@ -117,19 +202,52 @@ document.addEventListener('DOMContentLoaded', async function() {
         const member = await t.member('id', 'username', 'fullName');
         setDefaultCategory(member, categories);
 
-        // Get card details (name and labels)
-        const card = await t.card('name', 'labels');
+        // Get card details (name, labels, and attachments)
+        const card = await t.card('name', 'labels', 'attachments');
 
         // Get client name from first label
         const clientName = card.labels && card.labels.length > 0 ? card.labels[0].name : null;
         console.log('Card client label:', clientName || 'No label found');
 
+        // Check if this is a child card (has parent card attachment)
+        console.log('=== CHECKING IF CHILD CARD ===');
+        console.log('Current card name:', card.name);
+
+        const parentAttachment = getParentCardAttachment(card);
+        let cardNameForMatching = card.name;
+        let isChildCard = false;
+
+        if (parentAttachment) {
+            console.log('✓✓✓ CHILD CARD DETECTED ✓✓✓');
+            console.log('Parent attachment:', parentAttachment);
+
+            const parentCardName = getParentCardNameFromAttachment(parentAttachment);
+            console.log('Final parent card name to use:', parentCardName);
+
+            if (parentCardName) {
+                cardNameForMatching = parentCardName;
+                isChildCard = true;
+                console.log(`✓✓✓ WILL USE PARENT CARD NAME: "${parentCardName}"`);
+                console.log(`Original child card name was: "${card.name}"`);
+            } else {
+                console.error('❌❌❌ FAILED to extract parent card name from attachment');
+                console.log('Will use child card name instead:', card.name);
+            }
+        } else {
+            console.log('ℹ️ This is NOT a child card (no parent attachment found)');
+            console.log('Will use card\'s own name:', card.name);
+        }
+
+        console.log('=== FINAL DECISION ===');
+        console.log('Card name for matching:', cardNameForMatching);
+        console.log('Is child card?', isChildCard);
+
         // Load Harvest projects (has its own error handling)
         try {
             await loadHarvestProjects(clientName);
 
-            // Auto-match project if successful
-            autoMatchProject(card.name, clientName);
+            // Auto-match project if successful (using parent card name if child)
+            autoMatchProject(cardNameForMatching, clientName, isChildCard);
         } catch (harvestError) {
             console.error('Harvest error:', harvestError);
             // loadHarvestProjects already shows error, don't call showProjectError again
@@ -298,13 +416,19 @@ function populateProjectDropdown(projects) {
     });
 }
 
-function autoMatchProject(cardName, clientName) {
+function autoMatchProject(cardName, clientName, isChildCard = false) {
     try {
-        console.log('Attempting to auto-match project for card:', cardName);
+        console.log('=== AUTO-MATCH PROJECT FUNCTION ===');
+        console.log('Parameters received:');
+        console.log('  - cardName:', cardName);
+        console.log('  - clientName:', clientName);
+        console.log('  - isChildCard:', isChildCard);
 
         const selectElement = document.getElementById('project-select');
         const matchInfo = document.getElementById('project-match-info');
         const matchedProjectName = document.getElementById('matched-project-name');
+
+        console.log('Total Harvest projects loaded:', harvestProjects.length);
 
         // Filter projects by client if provided
         let projectsToSearch = harvestProjects;
@@ -312,34 +436,60 @@ function autoMatchProject(cardName, clientName) {
             projectsToSearch = harvestProjects.filter(project =>
                 project.client && project.client.name === clientName
             );
-            console.log(`Searching within ${projectsToSearch.length} projects for client: ${clientName}`);
+            console.log(`✓ Filtered to ${projectsToSearch.length} projects for client: ${clientName}`);
+        } else {
+            console.log('No client filter - searching all projects');
         }
+
+        // Log a few project names for debugging
+        console.log('Available projects to search (first 5):', projectsToSearch.slice(0, 5).map(p => p.name));
+
+        console.log(`Searching for project name matching: "${cardName}"`);
 
         const matchedProject = projectsToSearch.find(project =>
             project.name.toLowerCase() === cardName.toLowerCase()
         );
 
         if (matchedProject) {
-            console.log('✓ Found matching project:', matchedProject.name);
+            console.log('✓✓✓ FOUND MATCHING PROJECT ✓✓✓');
+            console.log('Matched project:', matchedProject.name);
+            console.log('Project ID:', matchedProject.id);
+
             selectElement.value = matchedProject.id;
+            console.log('Set dropdown value to:', matchedProject.id);
 
             const option = selectElement.options[selectElement.selectedIndex];
+            console.log('Selected option:', option);
+
             if (option && option.dataset.projectData) {
                 selectedProject = JSON.parse(option.dataset.projectData);
+                console.log('Selected project data:', selectedProject);
 
-                matchedProjectName.textContent = matchedProject.name;
+                // Update match info text based on whether this is a child card
+                if (isChildCard) {
+                    matchedProjectName.textContent = `${matchedProject.name} (from parent card)`;
+                    console.log('✓ Showing match with "(from parent card)" indicator');
+                } else {
+                    matchedProjectName.textContent = matchedProject.name;
+                    console.log('✓ Showing match without indicator');
+                }
                 matchInfo.style.display = 'block';
+            } else {
+                console.error('❌ Option or dataset.projectData not found');
             }
 
             // Validate form (enables Start Timer button if category also selected)
             validateForm();
         } else {
-            console.log('No matching Harvest project found for card name:', cardName);
+            console.log('❌❌❌ NO MATCHING PROJECT FOUND ❌❌❌');
+            console.log(`Searched for: "${cardName}"`);
+            console.log(`In ${projectsToSearch.length} projects`);
             // Validate form state even without auto-match
             validateForm();
         }
     } catch (error) {
-        console.error('Error in autoMatchProject:', error);
+        console.error('❌❌❌ ERROR in autoMatchProject:', error);
+        console.error('Stack trace:', error.stack);
         // Don't let auto-match errors break the popup
     }
 }
