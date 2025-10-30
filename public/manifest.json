@@ -4,6 +4,7 @@
   "author": "C-360",
   "capabilities": [
     "card-buttons",
+    "card-badges",
     "callback"
   ],
   "connectors": {
