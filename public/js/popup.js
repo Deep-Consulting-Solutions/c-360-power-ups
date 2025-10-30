@@ -353,8 +353,63 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (parentAttachment) {
             console.log('✓✓✓ CHILD CARD DETECTED ✓✓✓');
             console.log('Parent attachment:', parentAttachment);
+            console.log('🔍 ALL ATTACHMENT FIELDS:');
+            Object.keys(parentAttachment).forEach(key => {
+                console.log(`   ${key}:`, parentAttachment[key]);
+            });
 
-            const parentCardName = getParentCardNameFromAttachment(parentAttachment);
+            // Extract card ID from URL
+            const cardIdMatch = parentAttachment.url.match(/trello\.com\/c\/([^\/]+)/);
+            let parentCardName = null;
+
+            if (cardIdMatch && cardIdMatch[1]) {
+                const parentCardId = cardIdMatch[1];
+                console.log('✓ Extracted parent card ID:', parentCardId);
+
+                try {
+                    // Use the attachment name if it's not a URL
+                    if (parentAttachment.name && !parentAttachment.name.startsWith('http')) {
+                        parentCardName = parentAttachment.name;
+                        console.log('✅ Got parent card name from attachment name field:', parentCardName);
+                    } else {
+                        // The name is a URL, we need to fetch the actual card name from Trello API
+                        console.log('ℹ️ Attachment name is URL, fetching card data from Trello API...');
+                        console.log('📡 Making API call to get card name for ID:', parentCardId);
+
+                        try {
+                            // Get all visible cards using t.cards('all')
+                            console.log('📡 Fetching all cards to find parent card...');
+                            const allCards = await t.cards('all');
+                            console.log(`📋 Found ${allCards.length} cards visible`);
+
+                            // Find the card that matches the parent card ID
+                            const parentCard = allCards.find(card => card.id === parentCardId || card.shortLink === parentCardId);
+
+                            if (parentCard && parentCard.name) {
+                                parentCardName = parentCard.name;
+                                console.log('✅ Got parent card name from cards:', parentCardName);
+                            } else {
+                                console.warn('⚠️ Could not find parent card in visible cards, trying URL extraction...');
+                                console.log('   Parent card ID we are looking for:', parentCardId);
+                                console.log('   Card IDs found:', allCards.map(c => `${c.name} (id: ${c.id}, shortLink: ${c.shortLink})`).slice(0, 5));
+                                parentCardName = getParentCardNameFromAttachment(parentAttachment);
+                            }
+                        } catch (fetchError) {
+                            console.warn('⚠️ Failed to fetch cards:', fetchError.message);
+                            console.log('   Trying URL extraction as fallback...');
+                            parentCardName = getParentCardNameFromAttachment(parentAttachment);
+                        }
+                    }
+                } catch (apiError) {
+                    console.warn('⚠️ Error processing parent attachment, trying URL extraction...', apiError.message);
+                    // Fallback to URL extraction
+                    parentCardName = getParentCardNameFromAttachment(parentAttachment);
+                }
+            } else {
+                console.warn('⚠️ Could not extract card ID from URL, trying URL slug extraction...');
+                parentCardName = getParentCardNameFromAttachment(parentAttachment);
+            }
+
             console.log('Final parent card name to use:', parentCardName);
 
             if (parentCardName) {
@@ -363,7 +418,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 console.log(`✓✓✓ WILL USE PARENT CARD NAME: "${parentCardName}"`);
                 console.log(`Original child card name was: "${card.name}"`);
             } else {
-                console.error('❌❌❌ FAILED to extract parent card name from attachment');
+                console.error('❌❌❌ FAILED to get parent card name');
                 console.log('Will use child card name instead:', card.name);
             }
         } else {
@@ -577,11 +632,16 @@ function autoMatchProject(cardName, clientName, isChildCard = false) {
         // Log a few project names for debugging
         console.log('Available projects to search (first 5):', projectsToSearch.slice(0, 5).map(p => p.name));
 
-        console.log(`Searching for project name matching: "${cardName}"`);
+        console.log(`🔍 Searching for project name matching: "${cardName}"`);
+        console.log(`🔍 Card name length: ${cardName.length} characters`);
+        console.log(`🔍 Card name (lowercase): "${cardName.toLowerCase()}"`);
 
-        const matchedProject = projectsToSearch.find(project =>
-            project.name.toLowerCase() === cardName.toLowerCase()
-        );
+        const matchedProject = projectsToSearch.find(project => {
+            console.log(`  🔄 Comparing with: "${project.name}" (lowercase: "${project.name.toLowerCase()}")`);
+            const isMatch = project.name.toLowerCase() === cardName.toLowerCase();
+            console.log(`     Match result: ${isMatch ? '✅ YES' : '❌ NO'}`);
+            return isMatch;
+        });
 
         if (matchedProject) {
             console.log('✓✓✓ FOUND MATCHING PROJECT ✓✓✓');
